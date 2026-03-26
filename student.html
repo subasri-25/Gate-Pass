@@ -1,49 +1,27 @@
-<div class="container">
-  <h2>Student</h2>
+<!DOCTYPE html>
+<html>
+<body>
 
-  <a href="/logout"><button>Logout</button></a>
+<h2>Student Dashboard</h2>
 
-  <form action="/apply" method="POST">
-    <input name="name" placeholder="Name" required>
-    <input name="reason" placeholder="Reason" required>
+<form action="/apply" method="POST">
+    <input name="name" placeholder="Name" required><br><br>
+    <input name="phone" placeholder="Phone (+91...)" required><br><br>
+    <input name="reason" placeholder="Reason" required><br><br>
     <button>Apply</button>
-  </form>
+</form>
 
-  <ul id="list">
-    {% for r in requests %}
-    <li>
-      {{r.name}} - {{r.reason}} -
-      <span class="status">{{r.status}}</span>
-    </li>
-    {% endfor %}
-  </ul>
+<h3>Your Requests</h3>
+
+{% for r in requests %}
+<div style="border:1px solid black; margin:10px; padding:10px;">
+    <p>Name: {{r.name}}</p>
+    <p>Reason: {{r.reason}}</p>
+    <p>Status: {{r.status}}</p>
+
+    <img src="/static/qrcodes/request_{{r.id}}.png" width="120">
 </div>
+{% endfor %}
 
-<script>
-let oldStatuses = [];
-
-function getStatuses(doc) {
-  let list = doc.querySelectorAll(".status");
-  let arr = [];
-  list.forEach(el => arr.push(el.innerText));
-  return arr;
-}
-
-oldStatuses = getStatuses(document);
-
-setInterval(() => {
-  fetch("/student")
-    .then(res => res.text())
-    .then(data => {
-      let temp = document.createElement("div");
-      temp.innerHTML = data;
-
-      let newStatuses = getStatuses(temp);
-
-      if (JSON.stringify(newStatuses) !== JSON.stringify(oldStatuses)) {
-        alert("🔔 Status Updated!");
-        location.reload();
-      }
-    });
-}, 3000);
-</script>
+</body>
+</html>
