@@ -1,0 +1,49 @@
+<div class="container">
+  <h2>Student</h2>
+
+  <a href="/logout"><button>Logout</button></a>
+
+  <form action="/apply" method="POST">
+    <input name="name" placeholder="Name" required>
+    <input name="reason" placeholder="Reason" required>
+    <button>Apply</button>
+  </form>
+
+  <ul id="list">
+    {% for r in requests %}
+    <li>
+      {{r.name}} - {{r.reason}} -
+      <span class="status">{{r.status}}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<script>
+let oldStatuses = [];
+
+function getStatuses(doc) {
+  let list = doc.querySelectorAll(".status");
+  let arr = [];
+  list.forEach(el => arr.push(el.innerText));
+  return arr;
+}
+
+oldStatuses = getStatuses(document);
+
+setInterval(() => {
+  fetch("/student")
+    .then(res => res.text())
+    .then(data => {
+      let temp = document.createElement("div");
+      temp.innerHTML = data;
+
+      let newStatuses = getStatuses(temp);
+
+      if (JSON.stringify(newStatuses) !== JSON.stringify(oldStatuses)) {
+        alert("🔔 Status Updated!");
+        location.reload();
+      }
+    });
+}, 3000);
+</script>

@@ -1,0 +1,37 @@
+<div class="container">
+  <h2>Admin Dashboard</h2>
+
+  <a href="/logout"><button>Logout</button></a>
+
+  <ul id="list">
+    {% for r in requests %}
+    <li>
+      name: {{r.name}} <br>
+      reason: {{r.reason}} <br>
+      status: {{r.status}} <br><br>
+
+      <a href="/approve/{{r.id}}"><button>Approve</button></a>
+      <a href="/deny/{{r.id}}"><button>Deny</button></a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<script>
+let count = document.querySelectorAll("#list li").length;
+
+setInterval(() => {
+  fetch("/admin")
+    .then(res => res.text())
+    .then(data => {
+      let temp = document.createElement("div");
+      temp.innerHTML = data;
+      let newCount = temp.querySelectorAll("li").length;
+
+      if (newCount > count) {
+        alert("🔔 New Request!");
+        location.reload();
+      }
+    });
+}, 3000);
+</script>
