@@ -1,37 +1,19 @@
-<div class="container">
-  <h2>Admin Dashboard</h2>
+<!DOCTYPE html>
+<html>
+<body>
 
-  <a href="/logout"><button>Logout</button></a>
+<h2>Admin Dashboard</h2>
 
-  <ul id="list">
-    {% for r in requests %}
-    <li>
-      name: {{r.name}} <br>
-      reason: {{r.reason}} <br>
-      status: {{r.status}} <br><br>
+{% for r in requests %}
+<div style="border:1px solid black; margin:10px; padding:10px;">
+    <p>Name: {{r.name}}</p>
+    <p>Reason: {{r.reason}}</p>
+    <p>Status: {{r.status}}</p>
 
-      <a href="/approve/{{r.id}}"><button>Approve</button></a>
-      <a href="/deny/{{r.id}}"><button>Deny</button></a>
-    </li>
-    {% endfor %}
-  </ul>
+    <a href="/approve/{{r.id}}"><button>Approve</button></a>
+    <a href="/deny/{{r.id}}"><button>Deny</button></a>
 </div>
+{% endfor %}
 
-<script>
-let count = document.querySelectorAll("#list li").length;
-
-setInterval(() => {
-  fetch("/admin")
-    .then(res => res.text())
-    .then(data => {
-      let temp = document.createElement("div");
-      temp.innerHTML = data;
-      let newCount = temp.querySelectorAll("li").length;
-
-      if (newCount > count) {
-        alert("🔔 New Request!");
-        location.reload();
-      }
-    });
-}, 3000);
-</script>
+</body>
+</html>
