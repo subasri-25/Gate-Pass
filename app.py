@@ -1,5 +1,9 @@
 from flask import Flask, render_template, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
+import qrcode
+import os
+from datetime import datetime
+from twilio.rest import Client
 
 app = Flask(__name__)
 app.secret_key = "secret123"
@@ -7,18 +11,28 @@ app.secret_key = "secret123"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
 db = SQLAlchemy(app)
 
-# Users
+# ---------------- USERS ----------------
 users = {
     "student": {"password": "123", "role": "student"},
     "admin": {"password": "admin", "role": "admin"}
 }
 
+# ---------------- DATABASE MODEL ----------------
 class Request(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     reason = db.Column(db.String(200))
     status = db.Column(db.String(20), default="Pending")
+    phone = db.Column(db.String(15))
 
+# ---------------- TWILIO CONFIG ----------------
+account_sid = "YOUR_ACCOUNT_SID"
+auth_token = "YOUR_AUTH_TOKEN"
+twilio_number = "YOUR_TWILIO_NUMBER"
+
+client = Client(account_sid, auth_token)
+
+# ---------------- ROUTES ----------------
 @app.route('/')
 def home():
     return render_template("index.html")
@@ -39,13 +53,10 @@ def login_check():
             return redirect('/admin')
         else:
             return redirect('/student')
+
     return "Invalid Login ❌"
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect('/')
-
+# ---------------- STUDENT ----------------
 @app.route('/student')
 def student():
     if session.get('role') != "student":
@@ -54,6 +65,36 @@ def student():
     requests = Request.query.all()
     return render_template("student.html", requests=requests)
 
+@app.route('/apply', methods=['POST'])
+def apply():
+    name = request.form['name']
+    reason = request.form['reason']
+    phone = request.form['phone']
+
+    new_request = Request(name=name, reason=reason, phone=phone)
+    db.session.add(new_request)
+    db.session.commit()
+
+    # -------- QR CODE --------
+    qr_data = f"""
+    ID: {new_request.id}
+    Name: {name}
+    Reason: {reason}
+    Status: Pending
+    Date: {datetime.now()}
+    """
+
+    qr = qrcode.make(qr_data)
+
+    folder = "static/qrcodes"
+    os.makedirs(folder, exist_ok=True)
+
+    qr_path = f"{folder}/request_{new_request.id}.png"
+    qr.save(qr_path)
+
+    return redirect('/student')
+
+# ---------------- ADMIN ----------------
 @app.route('/admin')
 def admin():
     if session.get('role') != "admin":
@@ -62,40 +103,43 @@ def admin():
     requests = Request.query.all()
     return render_template("admin.html", requests=requests)
 
-@app.route('/apply', methods=['POST'])
-def apply():
-    if session.get('role') != "student":
-        return redirect('/login')
-
-    data = Request(
-        name=request.form['name'],
-        reason=request.form['reason']
-    )
-    db.session.add(data)
-    db.session.commit()
-    return redirect('/student')
-
 @app.route('/approve/<int:id>')
 def approve(id):
-    if session.get('role') != "admin":
-        return redirect('/login')
-
     req = Request.query.get(id)
     req.status = "Approved"
     db.session.commit()
+
+    # -------- SMS --------
+    try:
+        client.messages.create(
+            body=f"✅ Gate Pass Approved for {req.name}",
+            from_=twilio_number,
+            to=req.phone
+        )
+    except:
+        print("SMS Failed")
+
     return redirect('/admin')
 
 @app.route('/deny/<int:id>')
 def deny(id):
-    if session.get('role') != "admin":
-        return redirect('/login')
-
     req = Request.query.get(id)
     req.status = "Denied"
     db.session.commit()
+
+    try:
+        client.messages.create(
+            body=f"❌ Gate Pass Denied for {req.name}",
+            from_=twilio_number,
+            to=req.phone
+        )
+    except:
+        print("SMS Failed")
+
     return redirect('/admin')
 
+# ---------------- RUN ----------------
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
